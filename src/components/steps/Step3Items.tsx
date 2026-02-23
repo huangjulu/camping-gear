@@ -7,6 +7,11 @@ interface Selection {
   custom_note?: string
 }
 
+interface CustomCategory {
+  id: string
+  name: string
+}
+
 interface Props {
   categories: Category[]
   items: Item[]
@@ -14,9 +19,66 @@ interface Props {
   selectedCategoryIds: string[]
   selections: Selection[]
   onSelectionsChange: (s: Selection[]) => void
+  customCategories: CustomCategory[]
   onNext: () => void
   onBack: () => void
   userName: string
+}
+
+interface CustomItemInputProps {
+  inputValue: string
+  onInputChange: (val: string) => void
+  onAdd: () => void
+  customSels: Selection[]
+  onRemove: (idx: number) => void
+}
+
+function CustomItemInput({ inputValue, onInputChange, onAdd, customSels, onRemove }: CustomItemInputProps) {
+  return (
+    <div className="space-y-2">
+      {customSels.map((s, i) => (
+        <div key={i} className="rounded-xl border-2 border-[#08BFA0] bg-[#08BFA0]/5 p-3">
+          <div className="flex items-center gap-3">
+            <div className="w-6 h-6 rounded-md border-2 border-[#08BFA0] bg-[#08BFA0] text-white flex items-center justify-center flex-shrink-0 text-xs">
+              ✓
+            </div>
+            <span className="flex-1 text-sm font-medium text-gray-800">{s.custom_note}</span>
+            <button
+              type="button"
+              onClick={() => onRemove(i)}
+              className="text-gray-400 hover:text-red-400 transition-colors"
+            >
+              <X className="w-3 h-3" />
+            </button>
+          </div>
+        </div>
+      ))}
+      <div className="rounded-xl border-2 border-dashed border-gray-200 bg-white p-3">
+        <div className="flex items-center gap-3">
+          <div className="w-6 h-6 rounded-md border-2 border-dashed border-gray-300 flex items-center justify-center flex-shrink-0">
+            <Plus className="w-3 h-3 text-gray-400" />
+          </div>
+          <input
+            type="text"
+            placeholder="新增其他品項…"
+            value={inputValue}
+            onChange={(e) => onInputChange(e.target.value)}
+            onKeyDown={(e) => e.key === 'Enter' && onAdd()}
+            className="flex-1 text-sm text-gray-700 bg-transparent outline-none placeholder-gray-400"
+          />
+          {inputValue.trim() && (
+            <button
+              type="button"
+              onClick={onAdd}
+              className="text-[#08BFA0] hover:text-[#07aa8e] transition-colors"
+            >
+              <Plus className="w-4 h-4" />
+            </button>
+          )}
+        </div>
+      </div>
+    </div>
+  )
 }
 
 export function Step3Items({
@@ -26,14 +88,22 @@ export function Step3Items({
   selectedCategoryIds,
   selections,
   onSelectionsChange,
+  customCategories,
   onNext,
   onBack,
   userName,
 }: Props) {
   const [noteInputs, setNoteInputs] = useState<Record<string, string>>({})
-  const [otherInput, setOtherInput] = useState('')
+  const [customInputs, setCustomInputs] = useState<Record<string, string>>({})
 
-  const filteredCategories = categories.filter((c) => selectedCategoryIds.includes(c.id))
+  // Merge DB categories + user-created custom categories, filtered to selected
+  const filteredCategories: { id: string; name: string; icon: string | null }[] = [
+    ...categories.filter((c) => selectedCategoryIds.includes(c.id)),
+    ...customCategories
+      .filter((c) => selectedCategoryIds.includes(c.id))
+      .map((c) => ({ id: c.id, name: c.name, icon: '✏️' })),
+  ]
+
   const itemsByCategory = new Map<string, Item[]>()
   for (const item of items) {
     const list = itemsByCategory.get(item.category_id) ?? []
@@ -65,27 +135,35 @@ export function Step3Items({
     )
   }
 
-  // "其他" 類別：每筆新增都存為獨立 selection（item_id='item-other'）
-  const otherSelections = selections.filter((s) => s.item_id === 'item-other')
-
-  const addOtherItem = () => {
-    if (!otherInput.trim()) return
-    onSelectionsChange([...selections, { item_id: 'item-other', custom_note: otherInput.trim() }])
-    setOtherInput('')
+  // otherItemId:
+  //   cat-other          → 'item-other'           (real DB item)
+  //   regular DB cat     → 'item-other-{catId}'   (real DB item, needs migration)
+  //   custom-* frontend  → 'item-other-custom-{catId}' (virtual, remapped to item-other on submit)
+  const otherItemId = (catId: string) => {
+    if (catId === 'cat-other') return 'item-other'
+    if (catId.startsWith('custom-')) return `item-other-${catId}`
+    return `item-other-${catId}`
   }
 
-  const removeOtherAt = (idx: number) => {
+  const getCustomSelections = (oItemId: string) =>
+    selections.filter((s) => s.item_id === oItemId)
+
+  const addCustomItem = (catId: string) => {
+    const val = customInputs[catId]?.trim()
+    if (!val) return
+    onSelectionsChange([...selections, { item_id: otherItemId(catId), custom_note: val }])
+    setCustomInputs((prev) => ({ ...prev, [catId]: '' }))
+  }
+
+  const removeCustomItem = (oItemId: string, idx: number) => {
     let count = 0
     onSelectionsChange(
       selections.filter((s) => {
-        if (s.item_id !== 'item-other') return true
+        if (s.item_id !== oItemId) return true
         return count++ !== idx
       })
     )
   }
-
-  // 非 item-other 的 selections（用於 disabled 判斷）
-  const regularSelections = selections.filter((s) => s.item_id !== 'item-other')
 
   return (
     <div className="space-y-6">
@@ -98,50 +176,32 @@ export function Step3Items({
 
       <div className="space-y-5">
         {filteredCategories.map((cat) => {
-          // ── 其他（自填）類別 ──────────────────────────
-          if (cat.id === 'cat-other') {
+          const oItemId = otherItemId(cat.id)
+          const customSels = getCustomSelections(oItemId)
+
+          // cat-other or user-created custom categories: only show the custom input
+          if (cat.id === 'cat-other' || cat.id.startsWith('custom-')) {
             return (
               <div key={cat.id} className="space-y-2">
                 <h3 className="text-sm font-bold text-[#08BFA0] flex items-center gap-1">
                   {cat.icon} {cat.name}
                 </h3>
-                <div className="rounded-xl border-2 border-gray-200 bg-white p-3 space-y-2">
-                  <div className="flex gap-2">
-                    <input
-                      type="text"
-                      placeholder="想帶的其他東西…"
-                      value={otherInput}
-                      onChange={(e) => setOtherInput(e.target.value)}
-                      onKeyDown={(e) => e.key === 'Enter' && addOtherItem()}
-                      className="flex-1 px-3 py-2 text-sm rounded-lg border border-gray-200 focus:outline-none focus:border-[#08BFA0] transition-all bg-white"
-                    />
-                    <button
-                      type="button"
-                      onClick={addOtherItem}
-                      className="px-3 py-2 bg-[#08BFA0]/10 text-[#08BFA0] rounded-lg hover:bg-[#08BFA0]/20 transition-colors"
-                    >
-                      <Plus className="w-4 h-4" />
-                    </button>
-                  </div>
-                  {otherSelections.map((s, i) => (
-                    <div key={i} className="flex items-center gap-2 text-sm bg-[#08BFA0]/5 px-3 py-2 rounded-lg">
-                      <span className="flex-1 text-gray-700">✓ {s.custom_note}</span>
-                      <button
-                        type="button"
-                        onClick={() => removeOtherAt(i)}
-                        className="text-gray-400 hover:text-red-400 transition-colors"
-                      >
-                        <X className="w-3 h-3" />
-                      </button>
-                    </div>
-                  ))}
-                </div>
+                <CustomItemInput
+                  inputValue={customInputs[cat.id] ?? ''}
+                  onInputChange={(val) => setCustomInputs((prev) => ({ ...prev, [cat.id]: val }))}
+                  onAdd={() => addCustomItem(cat.id)}
+                  customSels={customSels}
+                  onRemove={(idx) => removeCustomItem(oItemId, idx)}
+                />
               </div>
             )
           }
 
-          // ── 一般類別 ──────────────────────────────────
-          const catItems = itemsByCategory.get(cat.id) ?? []
+          // Regular category: show items (excluding item-other-{catId}) + custom input at bottom
+          const catItems = (itemsByCategory.get(cat.id) ?? []).filter(
+            (item) => item.id !== oItemId
+          )
+
           return (
             <div key={cat.id} className="space-y-2">
               <h3 className="text-sm font-bold text-[#08BFA0] flex items-center gap-1">
@@ -225,6 +285,15 @@ export function Step3Items({
                     </div>
                   )
                 })}
+
+                {/* Per-category custom "其他" input */}
+                <CustomItemInput
+                  inputValue={customInputs[cat.id] ?? ''}
+                  onInputChange={(val) => setCustomInputs((prev) => ({ ...prev, [cat.id]: val }))}
+                  onAdd={() => addCustomItem(cat.id)}
+                  customSels={customSels}
+                  onRemove={(idx) => removeCustomItem(oItemId, idx)}
+                />
               </div>
             </div>
           )
@@ -243,7 +312,7 @@ export function Step3Items({
         <button
           type="button"
           onClick={onNext}
-          disabled={regularSelections.length === 0 && otherSelections.length === 0}
+          disabled={selections.length === 0}
           className="flex-[2] py-4 bg-[#08BFA0] text-white font-semibold rounded-xl flex items-center justify-center gap-2 hover:bg-[#07aa8e] transition-colors min-h-[48px] shadow-md disabled:opacity-40 disabled:cursor-not-allowed"
         >
           確認清單
