@@ -18,12 +18,18 @@ interface Selection {
   custom_note?: string
 }
 
+interface CustomCategory {
+  id: string
+  name: string
+}
+
 export default function App() {
   const [view, setView] = useState<AppView>('main')
   const [step, setStep] = useState(1)
   const [userName, setUserName] = useState('')
   const [selectedCategories, setSelectedCategories] = useState<string[]>([])
   const [selections, setSelections] = useState<Selection[]>([])
+  const [customCategories, setCustomCategories] = useState<CustomCategory[]>([])
   const [searchQuery, setSearchQuery] = useState('')
   const [successMsg, setSuccessMsg] = useState('')
 
@@ -36,7 +42,14 @@ export default function App() {
     setStep(1)
     setSelectedCategories([])
     setSelections([])
+    setCustomCategories([])
     setView('form')
+  }
+
+  const addCustomCategory = (name: string) => {
+    const id = `custom-${Date.now()}`
+    setCustomCategories((prev) => [...prev, { id, name }])
+    setSelectedCategories((prev) => [...prev, id])
   }
 
   const closeForm = () => {
@@ -54,7 +67,8 @@ export default function App() {
     if (selections.length === 0) return
     await addAssignments.mutateAsync(
       selections.map((s) => ({
-        item_id: s.item_id,
+        // custom category items use virtual IDs — remap to 'item-other' for DB
+        item_id: s.item_id.startsWith('item-other-custom-') ? 'item-other' : s.item_id,
         user_name: userName,
         custom_note: s.custom_note || undefined,
       }))
@@ -175,7 +189,9 @@ export default function App() {
                   items={items}
                   assignments={assignments}
                   selected={selectedCategories}
+                  customCategories={customCategories}
                   onToggle={toggleCategory}
+                  onAddCustomCategory={addCustomCategory}
                   onNext={() => setStep(3)}
                   onBack={() => setStep(1)}
                 />
@@ -188,6 +204,7 @@ export default function App() {
                   selectedCategoryIds={selectedCategories}
                   selections={selections}
                   onSelectionsChange={setSelections}
+                  customCategories={customCategories}
                   onNext={() => setStep(4)}
                   onBack={() => setStep(2)}
                   userName={userName}

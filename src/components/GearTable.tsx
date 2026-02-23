@@ -1,6 +1,6 @@
 import { useMemo, useState, useRef, useEffect, useCallback } from 'react'
 import type { Category, Item, Assignment } from '@/types'
-import { Trash2, X } from 'lucide-react'
+import { Trash2, X, Plus } from 'lucide-react'
 
 function PencilSolid({ className }: { className?: string }) {
   return (
@@ -9,7 +9,7 @@ function PencilSolid({ className }: { className?: string }) {
     </svg>
   )
 }
-import { useDeleteAssignment } from '@/hooks/useAssignments'
+import { useDeleteAssignment, useAddAssignments } from '@/hooks/useAssignments'
 
 interface GearTableProps {
   categories: Category[]
@@ -21,9 +21,26 @@ interface GearTableProps {
 export function GearTable({ categories, items, assignments, searchQuery }: GearTableProps) {
   const [tooltip, setTooltip] = useState<{ id: string; note: string; x: number; y: number } | null>(null)
   const [canScrollRight, setCanScrollRight] = useState(false)
+  const [canScrollLeft, setCanScrollLeft] = useState(false)
   const [editingUser, setEditingUser] = useState<string | null>(null)
+  const [toastMsg, setToastMsg] = useState<string | null>(null)
   const scrollRef = useRef<HTMLDivElement>(null)
   const deleteAssignment = useDeleteAssignment()
+  const addAssignments = useAddAssignments()
+
+  const showToast = (msg: string) => {
+    setToastMsg(msg)
+    setTimeout(() => setToastMsg(null), 3000)
+  }
+
+  const handleAddAssignment = (item: Item, userName: string) => {
+    const count = (assignmentsByItem.get(item.id) ?? []).length
+    if (item.slot_limit !== null && count >= item.slot_limit) {
+      showToast('項目已經夠了喔~')
+      return
+    }
+    addAssignments.mutate([{ item_id: item.id, user_name: userName }])
+  }
 
   const allNames = useMemo(() => {
     const names = new Set(assignments.map((a) => a.user_name))
@@ -60,6 +77,7 @@ export function GearTable({ categories, items, assignments, searchQuery }: GearT
     const el = scrollRef.current
     if (!el) return
     setCanScrollRight(el.scrollLeft + el.clientWidth < el.scrollWidth - 4)
+    setCanScrollLeft(el.scrollLeft > 4)
   }, [])
 
   useEffect(() => {
@@ -70,6 +88,10 @@ export function GearTable({ categories, items, assignments, searchQuery }: GearT
 
   const scrollRight = () => {
     scrollRef.current?.scrollBy({ left: 120, behavior: 'smooth' })
+  }
+
+  const scrollLeft = () => {
+    scrollRef.current?.scrollBy({ left: -120, behavior: 'smooth' })
   }
 
   if (allNames.length === 0) {
@@ -97,7 +119,7 @@ export function GearTable({ categories, items, assignments, searchQuery }: GearT
       <div
         ref={scrollRef}
         onScroll={checkScroll}
-        className="overflow-x-auto rounded-2xl border border-[#08BFA0]/20 bg-white/80 backdrop-blur-sm shadow-sm scrollbar-thin"
+        className="overflow-x-auto overflow-y-hidden rounded-2xl border border-[#08BFA0]/20 bg-white/80 backdrop-blur-sm shadow-sm scrollbar-thin"
       >
         <table className="min-w-full text-sm border-collapse">
           <thead>
@@ -230,6 +252,15 @@ export function GearTable({ categories, items, assignments, searchQuery }: GearT
                                 )}
                               </div>
                             ))}
+                            {isEditing && userAssignments.length === 0 && item.id !== 'item-other' && (
+                              <button
+                                onClick={() => handleAddAssignment(item, name)}
+                                className="text-gray-300 hover:text-[#08BFA0] transition-colors"
+                                title="認領此品項"
+                              >
+                                <Plus className="w-3 h-3" />
+                              </button>
+                            )}
                           </td>
                         )
                       })}
@@ -251,14 +282,30 @@ export function GearTable({ categories, items, assignments, searchQuery }: GearT
         )}
       </div>
 
+      {canScrollLeft && (
+        <button
+          onClick={scrollLeft}
+          className="absolute left-2 top-2 w-9 h-9 rounded-full bg-[#08BFA0] text-white shadow-lg flex items-center justify-center z-20 text-base font-bold hover:bg-[#07aa8e] transition-colors"
+          aria-label="捲動查看左側"
+        >
+          ‹
+        </button>
+      )}
+
       {canScrollRight && (
         <button
           onClick={scrollRight}
-          className="absolute right-2 top-1/2 -translate-y-1/2 w-9 h-9 rounded-full bg-[#08BFA0] text-white shadow-lg flex items-center justify-center z-20 text-base font-bold hover:bg-[#07aa8e] transition-colors"
+          className="absolute right-2 top-2 w-9 h-9 rounded-full bg-[#08BFA0] text-white shadow-lg flex items-center justify-center z-20 text-base font-bold hover:bg-[#07aa8e] transition-colors"
           aria-label="捲動查看更多"
         >
           ›
         </button>
+      )}
+
+      {toastMsg && (
+        <div className="fixed top-4 right-4 z-50 bg-red-500 text-white text-sm font-semibold px-4 py-2.5 rounded-xl shadow-lg pointer-events-none">
+          {toastMsg}
+        </div>
       )}
     </div>
   )
