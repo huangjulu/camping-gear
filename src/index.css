@@ -1,0 +1,61 @@
+@import "tailwindcss";
+
+@theme {
+  --color-primary: #08BFA0;
+  --color-primary-foreground: #ffffff;
+  --color-forest-dark: #1a2e1a;
+  --color-forest-mid: #2d4a2d;
+  --color-forest-light: #3d6b3d;
+  --color-background: #f0faf7;
+  --color-card: #ffffff;
+  --color-border: #d1faf0;
+  --color-muted: #6b7280;
+  --color-muted-foreground: #9ca3af;
+  --color-destructive: #ef4444;
+  --font-sans: 'Noto Sans TC', system-ui, sans-serif;
+}
+
+* {
+  box-sizing: border-box;
+}
+
+body {
+  font-family: var(--font-sans);
+  background-color: var(--color-background);
+  color: #1a1a1a;
+  min-height: 100vh;
+  overflow-x: hidden;
+  margin: 0;
+}
+
+.scrollbar-thin::-webkit-scrollbar {
+  height: 4px;
+  width: 4px;
+}
+.scrollbar-thin::-webkit-scrollbar-track {
+  background: transparent;
+}
+.scrollbar-thin::-webkit-scrollbar-thumb {
+  background: #08BFA0;
+  border-radius: 2px;
+}
+
+@keyframes sway {
+  0%, 100% { transform: rotate(-1deg); }
+  50% { transform: rotate(1deg); }
+}
+
+@keyframes sway-slow {
+  0%, 100% { transform: rotate(-0.5deg); }
+  50% { transform: rotate(0.5deg); }
+}
+
+.animate-sway {
+  animation: sway 4s ease-in-out infinite;
+  transform-origin: bottom center;
+}
+
+.animate-sway-slow {
+  animation: sway-slow 6s ease-in-out infinite;
+  transform-origin: bottom center;
+}
