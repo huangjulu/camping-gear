@@ -59,3 +59,30 @@ body {
   animation: sway-slow 6s ease-in-out infinite;
   transform-origin: bottom center;
 }
+
+@keyframes twinkle {
+  0%, 100% { opacity: 0.9; }
+  50% { opacity: 0.1; }
+}
+
+@keyframes flicker {
+  0%, 100% { transform: scaleY(1) skewX(0deg); }
+  25%  { transform: scaleY(1.15) skewX(-4deg); }
+  50%  { transform: scaleY(0.9)  skewX(3deg); }
+  75%  { transform: scaleY(1.1)  skewX(-2deg); }
+}
+
+@keyframes glow-pulse {
+  0%, 100% { opacity: 0.25; }
+  50%       { opacity: 0.6; }
+}
+
+@keyframes lantern-swing {
+  0%, 100% { transform: rotate(-5deg); }
+  50%       { transform: rotate(5deg); }
+}
+
+.animate-twinkle   { animation: twinkle 2s ease-in-out infinite; }
+.animate-flicker   { animation: flicker 0.45s ease-in-out infinite; }
+.animate-glow      { animation: glow-pulse 1.8s ease-in-out infinite; }
+.animate-lantern   { animation: lantern-swing 3.5s ease-in-out infinite; }
