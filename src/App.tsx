@@ -91,8 +91,10 @@ export default function App() {
         {/* Banner */}
         <Banner />
 
-        {/* Search */}
-        <SearchBox value={searchQuery} onChange={setSearchQuery} />
+        {/* Search — 有資料才顯示 */}
+        {assignments.length > 0 && (
+          <SearchBox value={searchQuery} onChange={setSearchQuery} />
+        )}
 
         {/* Table */}
         <GearTable
