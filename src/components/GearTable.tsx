@@ -1,6 +1,14 @@
 import { useMemo, useState, useRef, useEffect, useCallback } from 'react'
 import type { Category, Item, Assignment } from '@/types'
-import { Trash2, Pencil } from 'lucide-react'
+import { Trash2, X } from 'lucide-react'
+
+function PencilSolid({ className }: { className?: string }) {
+  return (
+    <svg viewBox="0 0 24 24" fill="currentColor" className={className} aria-hidden="true">
+      <path d="M21.731 2.269a2.625 2.625 0 0 0-3.712 0l-1.157 1.157 3.712 3.712 1.157-1.157a2.625 2.625 0 0 0 0-3.712ZM19.513 8.199l-3.712-3.712-12.15 12.15a5.25 5.25 0 0 0-1.32 2.214l-.8 2.685a.75.75 0 0 0 .933.933l2.685-.8a5.25 5.25 0 0 0 2.214-1.32L19.513 8.2Z" />
+    </svg>
+  )
+}
 import { useDeleteAssignment } from '@/hooks/useAssignments'
 
 interface GearTableProps {
@@ -125,7 +133,10 @@ export function GearTable({ categories, items, assignments, searchQuery }: GearT
                             : 'opacity-40 hover:opacity-80 text-gray-400'
                         }`}
                       >
-                        <Pencil className="w-3 h-3" />
+                        {isEditing
+                          ? <X className="w-3 h-3" />
+                          : <PencilSolid className="w-3 h-3" />
+                        }
                       </button>
                     </div>
                   </th>
