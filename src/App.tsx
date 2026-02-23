@@ -41,6 +41,7 @@ export default function App() {
 
   const closeForm = () => {
     setView('main')
+    setSearchQuery('')   // Bug fix: 關閉表單時清除搜尋狀態
   }
 
   const toggleCategory = (id: string) => {
@@ -171,6 +172,8 @@ export default function App() {
               {step === 2 && (
                 <Step2Categories
                   categories={categories}
+                  items={items}
+                  assignments={assignments}
                   selected={selectedCategories}
                   onToggle={toggleCategory}
                   onNext={() => setStep(3)}
