@@ -102,7 +102,6 @@ export default function App() {
           items={items}
           assignments={assignments}
           searchQuery={searchQuery}
-          onRegister={openForm}
         />
 
         {/* Register button */}

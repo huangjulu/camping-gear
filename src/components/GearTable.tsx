@@ -8,10 +8,9 @@ interface GearTableProps {
   items: Item[]
   assignments: Assignment[]
   searchQuery: string
-  onRegister: () => void
 }
 
-export function GearTable({ categories, items, assignments, searchQuery, onRegister }: GearTableProps) {
+export function GearTable({ categories, items, assignments, searchQuery }: GearTableProps) {
   const [tooltip, setTooltip] = useState<{ id: string; note: string; x: number; y: number } | null>(null)
   const [canScrollRight, setCanScrollRight] = useState(false)
   const scrollRef = useRef<HTMLDivElement>(null)
@@ -81,16 +80,10 @@ export function GearTable({ categories, items, assignments, searchQuery, onRegis
   // 搜尋無結果
   if (q && displayedNames.length === 0) {
     return (
-      <div className="rounded-2xl border border-[#08BFA0]/20 bg-white/80 backdrop-blur-sm shadow-sm px-6 py-10 text-center space-y-4">
+      <div className="rounded-2xl border border-[#08BFA0]/20 bg-white/80 backdrop-blur-sm shadow-sm px-6 py-10 text-center space-y-3">
         <p className="text-2xl">🔍</p>
         <p className="text-gray-500 font-medium">找不到「{searchQuery}」</p>
         <p className="text-gray-400 text-sm">尼要先建立窩 &gt;&lt;</p>
-        <button
-          onClick={onRegister}
-          className="mt-2 px-5 py-2.5 bg-[#08BFA0] text-white text-sm font-semibold rounded-xl hover:bg-[#07aa8e] transition-colors shadow-md"
-        >
-          我要登記裝備
-        </button>
       </div>
     )
   }
